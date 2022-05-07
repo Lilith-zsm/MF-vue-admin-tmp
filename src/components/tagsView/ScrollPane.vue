@@ -1,0 +1,119 @@
+<template>
+  <div>
+    <i class="el-icon-arrow-left scrollBtn" @click="handleScrollBtn('left')" />
+    <el-scrollbar ref="scrollContainer" :vertical="false" class="scroll-container" @wheel.native.prevent="handleScroll">
+      <slot />
+    </el-scrollbar>
+    <i class="el-icon-arrow-right scrollBtn" @click="handleScrollBtn('right')" />
+  </div>
+</template>
+
+<script>
+const tagAndTagSpacing = 4 // tagAndTagSpacing
+
+export default {
+  name: 'ScrollPane',
+  data() {
+    return {
+      left: 0
+    }
+  },
+  computed: {
+    scrollWrapper() {
+      return this.$refs.scrollContainer.$refs.wrap
+    }
+  },
+  mounted() {
+    this.scrollWrapper.addEventListener('scroll', this.emitScroll, true)
+  },
+  beforeDestroy() {
+    this.scrollWrapper.removeEventListener('scroll', this.emitScroll)
+  },
+  methods: {
+    handleScroll(e) {
+      const eventDelta = e.wheelDelta || -e.deltaY * 40
+      const $scrollWrapper = this.scrollWrapper
+      $scrollWrapper.scrollLeft = $scrollWrapper.scrollLeft + eventDelta / 4
+    },
+    emitScroll() {
+      this.$emit('scroll')
+    },
+    moveToTarget(currentTag) {
+      const $container = this.$refs.scrollContainer.$el
+      const $containerWidth = $container.offsetWidth
+      const $scrollWrapper = this.scrollWrapper
+      const tagList = this.$parent.$refs.tag
+
+      let firstTag = null
+      let lastTag = null
+
+      // find first tag and last tag
+      if (tagList.length > 0) {
+        firstTag = tagList[0]
+        lastTag = tagList[tagList.length - 1]
+      }
+
+      if (firstTag === currentTag) {
+        $scrollWrapper.scrollLeft = 0
+      } else if (lastTag === currentTag) {
+        $scrollWrapper.scrollLeft = $scrollWrapper.scrollWidth - $containerWidth
+      } else {
+        // find preTag and nextTag
+        const currentIndex = tagList.findIndex(item => item === currentTag)
+        const prevTag = tagList[currentIndex - 1]
+        const nextTag = tagList[currentIndex + 1]
+
+        // the tag's offsetLeft after of nextTag
+        const afterNextTagOffsetLeft = nextTag.$el.offsetLeft + nextTag.$el.offsetWidth + tagAndTagSpacing
+
+        // the tag's offsetLeft before of prevTag
+        const beforePrevTagOffsetLeft = prevTag.$el.offsetLeft - tagAndTagSpacing
+
+        if (afterNextTagOffsetLeft > $scrollWrapper.scrollLeft + $containerWidth) {
+          $scrollWrapper.scrollLeft = afterNextTagOffsetLeft - $containerWidth
+        } else if (beforePrevTagOffsetLeft < $scrollWrapper.scrollLeft) {
+          $scrollWrapper.scrollLeft = beforePrevTagOffsetLeft
+        }
+      }
+    },
+    handleScrollBtn(type) {
+      const $container = this.$refs.scrollContainer.$el
+      const $containerWidth = $container.offsetWidth
+      const $scrollWrapper = this.scrollWrapper
+      if (type === 'left') {
+        $scrollWrapper.scrollLeft = ($scrollWrapper.scrollLeft - 100) > 0 ? ($scrollWrapper.scrollLeft - 100) : 0
+      } else if (type === 'right') {
+        $scrollWrapper.scrollLeft = ($scrollWrapper.scrollLeft + 100) > $scrollWrapper.scrollWidth - $containerWidth ? ($scrollWrapper.scrollWidth - $containerWidth) : ($scrollWrapper.scrollLeft + 100)
+      }
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.scroll-container {
+  display: inline-block;
+  width: calc(100% - 64px);
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  // width: 100%;
+  top: -1px;
+  ::v-deep {
+    .el-scrollbar__bar {
+      bottom: 0px;
+    }
+    .el-scrollbar__wrap {
+      height: 49px;
+    }
+  }
+}
+.scrollBtn{
+  height: 34px;
+  line-height: 34px;
+  display: inline-block;
+  vertical-align: top;
+  padding: 0 8px;
+  cursor: pointer;
+}
+</style>
